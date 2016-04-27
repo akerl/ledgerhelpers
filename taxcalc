@@ -2,6 +2,23 @@
 
 require 'yaml'
 require 'cymbal'
+require 'term/ansicolor'
+
+##
+# Give Numeric a helper .to_d for decimals
+class Numeric
+  def to_d
+    format '%.2f', self
+  end
+end
+
+## a_puts prints with padding to align decimals
+def a_puts(line, bold = false)
+  string, _, number = line.rpartition(' ')
+  pad = 45 - string.size - number.split('.').first.size
+  new_line = string + '  ' + '-' * pad + '  ' + number
+  puts bold ? Term::ANSIColor.bold(new_line) : new_line
+end
 
 ##
 # Calculator for tax burden
@@ -11,25 +28,40 @@ class TaxCalc
   end
 
   def summary
-    puts "Total Income: #{income}"
-    taxes.each { |tax| tax_summary(tax) }
-    puts "Total Assessed: #{taxes.reduce(0) { |a, i| a + tax_assessed(i) }}"
-    puts "Total Owed: #{taxes.reduce(0) { |a, i| a + tax_owed(i) }}"
-  end
-
-  def tax_summary(tax)
-    puts tax
-    puts '  Deductions:'
-    deductions[tax].each { |x| puts "    #{x[:name]}: #{x[:amount]}" }
-    puts "  Taxable Income: #{taxable_income(tax)}"
-    puts '  Taxes Per Bracket:'
-    per_bracket_cost(tax).each { |rate, cost| puts "    #{rate}: #{cost}" }
-    puts "  Total Assessed: #{tax_assessed(tax)}"
-    puts "  Total Withheld: #{withholding[tax]}"
-    puts "  Total Owed: #{tax_owed(tax)}"
+    a_puts "Total Income: #{income.to_d}"
+    puts 'Taxes:'
+    taxes.each { |tax| print_tax_summary(tax) }
+    a_puts "Total Income: #{income.to_d}"
+    a_puts "Total Assessed: #{total_assessed.to_d}"
+    a_puts "Total Withheld: #{total_withheld.to_d}"
+    a_puts "Total Owed: #{total_owed.to_d}", true 
   end
 
   private
+
+  def print_tax_summary(tax)
+    puts "  #{tax}"
+    print_deduction_summary(tax)
+    a_puts "    Taxable Income: #{taxable_income(tax).to_d}"
+    puts '    Taxes Per Bracket:'
+    per_bracket_cost(tax).each do |rate, cost|
+      a_puts "      #{rate.to_d}: #{cost.to_d}"
+    end
+    print_tax_totals(tax)
+  end
+
+  def print_deduction_summary(tax)
+    puts '    Deductions:'
+    deductions[tax].each do |x|
+      a_puts "      #{x[:name]}: #{x[:amount].to_d}"
+    end
+  end
+
+  def print_tax_totals(tax)
+    a_puts "    Total Assessed: #{tax_assessed(tax).to_d}"
+    a_puts "    Total Withheld: #{withholding[tax].to_d}"
+    a_puts "    Total Owed: #{tax_owed(tax).to_d}", true
+  end
 
   def config
     @config ||= Cymbal.symbolize(YAML.load(File.read(@config_file)))
@@ -80,14 +112,30 @@ class TaxCalc
     tmp_income = taxable_income(tax)
     brackets[tax].reverse.map do |bracket|
       next if tmp_income < bracket[:starts]
-      cost = (tmp_income - bracket[:starts] + 1) * bracket[:rate]
+      cost = bracket_rate_calc(bracket, tmp_income)
       tmp_income = bracket[:starts] - 1
       [bracket[:rate], cost]
     end.compact
   end
 
+  def bracket_rate_calc(bracket, income)
+    (income - bracket[:starts] + 1) * bracket[:rate]
+  end
+
   def taxable_income(tax)
-    income - deductions[tax].reduce(0) { |sum, item| sum + item[:amount] }
+    income - deductions[tax].reduce(0) { |a, e| a + e[:amount] }
+  end
+
+  def total_withheld
+    withholding.map(&:last).reduce(:+)
+  end
+
+  def total_assessed
+    taxes.reduce(0) { |a, e| a + tax_assessed(e) }
+  end
+
+  def total_owed
+    taxes.reduce(0) { |a, e| a + tax_owed(e) }
   end
 
   def parse_exemptions(from)
@@ -97,6 +145,6 @@ class TaxCalc
   end
 end
 
-config_file = ARGV.first || fail("Usage: #{$0} TAX_FILE")
+config_file = ARGV.first || raise("Usage: #{$PROGRAM_NAME} TAX_FILE")
 
 TaxCalc.new(config: config_file).summary

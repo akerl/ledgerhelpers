@@ -68,8 +68,9 @@ class TaxCalc
   end
 
   def get_total(account)
-    account = account.to_s
-    return withholding[account.split(':').last] if account.start_with? '_tax_:'
+    if account.to_s.start_with? '_tax_:'
+      return withholding[account.to_s.split(':').last.to_sym]
+    end
     `ledger register #{account} -p 'this year' -s`.split.last.tr('$,', '').to_f
   end
 

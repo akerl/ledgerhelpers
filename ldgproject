@@ -5,8 +5,8 @@ require 'yaml'
 require 'cymbal'
 require 'ballista'
 
-CONFIG_FILE = 'projections.yml'
-JOURNAL_DIR = 'journals'
+CONFIG_FILE = 'projections.yml'.freeze
+JOURNAL_DIR = 'journals'.freeze
 
 def config
   @config ||= Cymbal.symbolize(YAML.load(File.read(CONFIG_FILE)))
@@ -33,7 +33,7 @@ def header
 end
 
 def existing_content(file)
-  return "" unless File.exist? file
+  return '' unless File.exist? file
   File.read(file).partition(header).first.rstrip
 end
 

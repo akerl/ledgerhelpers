@@ -1,0 +1,102 @@
+#!/usr/bin/env ruby
+
+require 'yaml'
+require 'cymbal'
+
+##
+# Calculator for tax burden
+class TaxCalc
+  def initialize(params = {})
+    @config_file = params[:config]
+  end
+
+  def summary
+    puts "Total Income: #{income}"
+    taxes.each { |tax| tax_summary(tax) }
+    puts "Total Assessed: #{taxes.reduce(0) { |a, i| a + tax_assessed(i) }}"
+    puts "Total Owed: #{taxes.reduce(0) { |a, i| a + tax_owed(i) }}"
+  end
+
+  def tax_summary(tax)
+    puts tax
+    puts '  Deductions:'
+    deductions[tax].each { |x| puts "    #{x[:name]}: #{x[:amount]}" }
+    puts "  Taxable Income: #{taxable_income(tax)}"
+    puts '  Taxes Per Bracket:'
+    per_bracket_cost(tax).each { |rate, cost| puts "    #{rate}: #{cost}" }
+    puts "  Total Assessed: #{tax_assessed(tax)}"
+    puts "  Total Withheld: #{withholding[tax]}"
+    puts "  Total Owed: #{tax_owed(tax)}"
+  end
+
+  private
+
+  def config
+    @config ||= Cymbal.symbolize(YAML.load(File.read(@config_file)))
+  end
+
+  def get_total(account)
+    `ledger register #{account} -p 'this year' -s`.split.last.tr('$,', '').to_f
+  end
+
+  def income
+    @income ||= config[:taxable].reduce(0) do |sum, account|
+      sum + get_total(account) * -1
+    end
+  end
+
+  def withholding
+    @withholding ||= taxes.map { |tax| [tax, get_total(tax)] }.to_h
+  end
+
+  def deductions
+    @deductions ||= config[:deductions].each_with_object({}) do |item, acc|
+      item[:amount] ||= get_total(item[:name])
+      item[:from] = parse_exemptions(item[:from])
+      item[:from].each do |tax|
+        acc[tax] ||= []
+        acc[tax] << item
+      end
+    end
+  end
+
+  def brackets
+    @brackets ||= config[:brackets]
+  end
+
+  def taxes
+    @taxes ||= brackets.keys
+  end
+
+  def tax_owed(tax)
+    tax_assessed(tax) - withholding[tax]
+  end
+
+  def tax_assessed(tax)
+    per_bracket_cost(tax).map(&:last).reduce(:+)
+  end
+
+  def per_bracket_cost(tax)
+    tmp_income = taxable_income(tax)
+    brackets[tax].reverse.map do |bracket|
+      next if tmp_income < bracket[:starts]
+      cost = (tmp_income - bracket[:starts] + 1) * bracket[:rate]
+      tmp_income = bracket[:starts] - 1
+      [bracket[:rate], cost]
+    end.compact
+  end
+
+  def taxable_income(tax)
+    income - deductions[tax].reduce(0) { |sum, item| sum + item[:amount] }
+  end
+
+  def parse_exemptions(from)
+    return taxes unless from
+    from = [from] unless from.is_a? Array
+    from.map(&:to_sym)
+  end
+end
+
+config_file = ARGV.first || fail("Usage: #{$0} TAX_FILE")
+
+TaxCalc.new(config: config_file).summary

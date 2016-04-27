@@ -28,9 +28,9 @@ class TaxCalc
   end
 
   def summary
-    a_puts "Total Income: #{income.to_d}"
     puts 'Taxes:'
     taxes.each { |tax| print_tax_summary(tax) }
+    puts
     a_puts "Total Income: #{income.to_d}"
     a_puts "Total Assessed: #{total_assessed.to_d}"
     a_puts "Total Withheld: #{total_withheld.to_d}"

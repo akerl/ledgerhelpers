@@ -45,7 +45,7 @@ class TaxCalc
     a_puts "    Taxable Income: #{taxable_income(tax).to_d}"
     puts '    Taxes Per Bracket:'
     per_bracket_cost(tax).each do |rate, cost|
-      a_puts "      #{rate.to_d}: #{cost.to_d}"
+      a_puts "      #{rate}: #{cost.to_d}"
     end
     print_tax_totals(tax)
   end

@@ -84,6 +84,12 @@ brackets:
     starts: 0
 ```
 
+The taxable key is an array of ledger account names to sum as income.
+
+Deductions is an array of hashes. Each entry should be either a ledger account name (amount will be pulled from ledger), a tax name formatted like `_tax_:va_income` (which will pull total *withholding* for that tax), or an other string (must specify an "amount" key). Specify a tax name or array of tax names as "from:" if this deduction only applies to some taxes; the default is to apply to all taxes.
+
+The brackets key is a hash of tax names, each of which is an array of (rate, start) hashes. The start value is the dollar that *starts* that tax bracket.
+
 ## License
 
 All scripts except those noted internally are released under the MIT License. See the bundled LICENSE file for details

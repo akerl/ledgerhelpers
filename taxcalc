@@ -87,6 +87,7 @@ class TaxCalc
   def deductions
     @deductions ||= config[:deductions].each_with_object({}) do |item, acc|
       item[:amount] ||= get_total(item[:name])
+      item[:amount] = item[:cap] if item[:cap] && item[:cap] < item[:amount]
       item[:from] = parse_exemptions(item[:from])
       item[:from].each do |tax|
         acc[tax] ||= []

@@ -34,14 +34,16 @@ end
 
 def existing_content(file)
   return '' unless File.exist? file
-  File.read(file).partition(header).first.rstrip
+  content = File.read(file).partition(header).first.rstrip
+  return '' if content.empty?
+  content + "\n\n"
 end
 
 def walk_months
   month_pairs.each do |first, last|
     results = Ballista.new(entries: config).project(first, last)
     file = month_file(first)
-    new_content = "#{existing_content(file)}\n\n#{header}\n\n#{results}"
+    new_content = "#{existing_content(file)}#{header}\n\n#{results}"
     Dir.mkdir(File.dirname(file)) unless Dir.exist?(File.dirname(file))
     File.open(file, 'w') { |fh| fh << new_content }
   end

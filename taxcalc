@@ -40,7 +40,7 @@ class TaxCalc
   private
 
   def print_tax_summary(tax)
-    puts "  #{tax}"
+    puts "  #{tax.split(':').last}"
     print_deduction_summary(tax)
     a_puts "    Taxable Income: #{taxable_income(tax).to_d}"
     puts '    Taxes Per Bracket:'
@@ -96,8 +96,12 @@ class TaxCalc
     end
   end
 
+  def withholding_name(short_name)
+    [config[:withholding_basename], short_name].compact.join(':')
+  end
+
   def brackets
-    @brackets ||= config[:brackets]
+    @brackets ||= config[:brackets].map { |k, v| [withholding_name(k), v] }.to_h
   end
 
   def taxes

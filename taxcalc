@@ -15,9 +15,10 @@ end
 ## a_puts prints with padding to align decimals
 def a_puts(line, bold = false)
   string, _, number = line.rpartition(' ')
-  pad = 45 - string.size - number.split('.').first.size
+  pad = 60 - string.size - number.split('.').first.size
   new_line = string + '  ' + '-' * pad + '  ' + number
-  puts (bold && STDOUT.tty?) ? Term::ANSIColor.bold(new_line) : new_line
+  line = (bold && STDOUT.tty?) ? Term::ANSIColor.bold(new_line) : new_line
+  puts line
 end
 
 ##
@@ -52,7 +53,7 @@ class TaxCalc
 
   def print_deduction_summary(tax)
     puts '    Deductions:'
-    deductions[tax].each do |x|
+    deductions[tax.split(':').last.to_sym].each do |x|
       a_puts "      #{x[:name]}: #{x[:amount].to_d}"
     end
   end
@@ -131,6 +132,7 @@ class TaxCalc
   end
 
   def taxable_income(tax)
+    tax = tax.split(':').last.to_sym
     income - deductions[tax].reduce(0) { |a, e| a + e[:amount] }
   end
 
@@ -147,7 +149,7 @@ class TaxCalc
   end
 
   def parse_exemptions(from)
-    return taxes unless from
+    return taxes.map { |x| x.split(':').last.to_sym } unless from
     from = [from] unless from.is_a? Array
     from.map(&:to_sym)
   end

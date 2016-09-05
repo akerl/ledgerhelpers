@@ -1,0 +1,6 @@
+dependencies:
+  override:
+  - gem install rubocop
+test:
+  override:
+  - rubocop

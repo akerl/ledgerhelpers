@@ -12,18 +12,22 @@ class Numeric
   end
 end
 
-## a_puts prints with padding to align decimals
-def a_puts(line, bold = false)
+def pad(line)
   string, _, number = line.rpartition(' ')
   pad = 60 - string.size - number.split('.').first.size
-  new_line = string + '  ' + '-' * pad + '  ' + number
-  line = (bold && STDOUT.tty?) ? Term::ANSIColor.bold(new_line) : new_line
+  string + '  ' + '-' * pad + '  ' + number
+end
+
+## a_puts prints with padding to align decimals
+def a_puts(line, bold = false)
+  new_line = pad(line)
+  line = bold && STDOUT.tty? ? Term::ANSIColor.bold(new_line) : new_line
   puts line
 end
 
 ##
 # Calculator for tax burden
-class TaxCalc
+class TaxCalc # rubocop:disable Metrics/ClassLength
   def initialize(params = {})
     @config_file = params[:config]
   end
@@ -32,13 +36,17 @@ class TaxCalc
     puts 'Taxes:'
     taxes.each { |tax| print_tax_summary(tax) }
     puts
-    a_puts "Total Income: #{income.to_d}"
-    a_puts "Total Assessed: #{total_assessed.to_d}"
-    a_puts "Total Withheld: #{total_withheld.to_d}"
-    a_puts "Total Owed: #{total_owed.to_d}", true 
+    totals
   end
 
   private
+
+  def totals
+    a_puts "Total Income: #{income.to_d}"
+    a_puts "Total Assessed: #{total_assessed.to_d}"
+    a_puts "Total Withheld: #{total_withheld.to_d}"
+    a_puts "Total Owed: #{total_owed.to_d}", true
+  end
 
   def print_tax_summary(tax)
     puts "  #{tax.split(':').last}"
@@ -87,14 +95,18 @@ class TaxCalc
 
   def deductions
     @deductions ||= config[:deductions].each_with_object({}) do |item, acc|
-      item[:amount] ||= get_total(item[:name])
-      item[:amount] = item[:cap] if item[:cap] && item[:cap] < item[:amount]
+      parse_deduction_amount(item)
       item[:from] = parse_exemptions(item[:from])
       item[:from].each do |tax|
         acc[tax] ||= []
         acc[tax] << item
       end
     end
+  end
+
+  def parse_deduction_amount(item)
+    item[:amount] ||= get_total(item[:name])
+    item[:amount] = item[:cap] if item[:cap] && item[:cap] < item[:amount]
   end
 
   def withholding_name(short_name)

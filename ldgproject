@@ -9,7 +9,7 @@ CONFIG_FILE = 'projections.yml'.freeze
 JOURNAL_DIR = 'journals'.freeze
 
 def config
-  @config ||= Cymbal.symbolize(YAML.load(File.read(CONFIG_FILE)))
+  @config ||= Cymbal.symbolize(YAML.safe_load(File.read(CONFIG_FILE)))
 end
 
 def full_range

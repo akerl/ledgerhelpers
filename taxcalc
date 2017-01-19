@@ -73,7 +73,7 @@ class TaxCalc # rubocop:disable Metrics/ClassLength
   end
 
   def config
-    @config ||= Cymbal.symbolize(YAML.load(File.read(@config_file)))
+    @config ||= Cymbal.symbolize(YAML.safe_load(File.read(@config_file)))
   end
 
   def get_total(account)

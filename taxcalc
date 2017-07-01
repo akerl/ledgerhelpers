@@ -80,7 +80,7 @@ class TaxCalc # rubocop:disable Metrics/ClassLength
     if account.to_s.start_with? '_tax_:'
       return withholding[account.to_s.split(':').last.to_sym]
     end
-    `ledger register #{account} -p 'last year' -s`.split.last.tr('$,', '').to_f
+    `ledger register #{account} -p 'this year' -s`.split.last.tr('$,', '').to_f
   end
 
   def income

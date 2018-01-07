@@ -58,5 +58,4 @@ end
 
 puts 'Usage: check("2017/12/01", 8.00)'
 
-# rubocop:disable Lint/Debugger
-binding.pry
+binding.pry # rubocop:disable Lint/Debugger

@@ -82,8 +82,10 @@ class TaxCalc # rubocop:disable Metrics/ClassLength
     if account.to_s.start_with? '_tax_:'
       return withholding[account.to_s.split(':').last.to_sym]
     end
+
     res = `ledger register #{account} -p '#{@year}' -s`
     return 0 if res.size.zero?
+
     res.split.last.tr('$,', '').to_f
   end
 
@@ -137,6 +139,7 @@ class TaxCalc # rubocop:disable Metrics/ClassLength
     tmp_income = taxable_income(tax)
     brackets[tax].reverse.map do |bracket|
       next if tmp_income < bracket[:starts]
+
       cost = bracket_rate_calc(bracket, tmp_income)
       tmp_income = bracket[:starts] - 1
       [bracket[:rate], cost]
@@ -166,6 +169,7 @@ class TaxCalc # rubocop:disable Metrics/ClassLength
 
   def parse_exemptions(from)
     return taxes.map { |x| x.split(':').last.to_sym } unless from
+
     from = [from] unless from.is_a? Array
     from.map(&:to_sym)
   end

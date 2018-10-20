@@ -11,15 +11,26 @@ function drawChart() {
   data.addColumn('string', 'To');
   data.addColumn('number', 'Amount');
     data.addRows([
-<% pairs.each do |from, to, amount| %>
-        <%= "['#{from}', '#{to}', #{amount}]," %>
+<% pairs.each do |(from, to), amount| %>
+        <%= "['#{from}', '#{to}', #{amount.round}]," %>
 <% end %>
     ]);
 
   var options = {
+    width: 1400,
+    height: 4000,
+    sankey: {
+      iterations: 200,
+      node: {
+        nodePadding: 50,
+      },
+      link: {
+        colorMode: 'gradient',
+      },
+    },
         };
 
-        var chart = new google.visualization.LineChart(document.getElementById('chart'));
+        var chart = new google.visualization.Sankey(document.getElementById('chart'));
         chart.draw(data, options);
       }
     </script>

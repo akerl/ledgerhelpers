@@ -3,27 +3,81 @@
 require_relative 'charts/accounts.rb'
 require_relative 'charts/templates.rb'
 
+require 'libledger'
 require 'mercenary'
 
 ##
 # Describes a line chart object
-class LineChart
+class SankeyChart
   def initialize(params = {})
     @query = params[:query]
     @start = params[:start] || Date.today.prev_year
-    @stop = params[:stop] || Date.today.next_month.next_month
+    @stop = params[:stop] || Date.today
+    @scrub = params[:scrub]
   end
 
   def render!
-    template.render(pairs: pairs)
+    p = @scrub ? scrubbed_pairs : pairs
+    template.render(pairs: p)
   end
 
   private
 
+  def scrubbed_pairs
+    @scrubbed_pairs ||= pairs.map { |k, v| [k, v * 1000 / max + 1] }.to_h
+  end
+
+  def max
+    @max ||= pairs.values.max
+  end
+
   def pairs
-    @pairs ||= account.account_names.combination(2).map do |to, from|
-      res = account.run
+    @pairs ||= valid_entries.each_with_object(Hash.new { 0 }) do |item, acc|
+      src = src_account(item)
+      next unless account_names.include? src
+      item.actions.each do |action|
+        dst = action[:name]
+        next if dst == src
+        next unless account_names.include? dst
+        pair = pair_sort(src, dst)
+        acc[pair] = acc[pair] + action[:amount].sub(/^\$/, '').to_f
+      end
     end
+  end
+
+  def pair_sort(a, b)
+    [a, b].sort.sort_by { |x| pair_sort_mapping.find_index(x.split(':').first) }
+  end
+
+  def pair_sort_mapping
+    @pair_sort_mapping ||= ['Income', 'Assets', 'Liabilities', 'Expenses']
+  end
+
+  def src_account(entry)
+    res = entry.actions.find do |h|
+      amount = h[:amount]
+      amount.nil? || amount =~ /-/
+    end
+    raise("Failed to load source account: #{entry}") unless res
+    res[:name]
+  end
+
+  def valid_entries
+    @valid_entries ||= entries.select do |x|
+      x.date >= @start && x.date <= @stop
+    end
+  end
+
+  def entries
+    @entries ||= Ledger::Journal.from_files(ledger_files).entries
+  end
+
+  def ledger_files
+    @ledger_files ||= Dir.glob('journals/*/*.ldg')
+  end
+
+  def account_names
+    @account_names ||= account.account_names
   end
 
   def account
@@ -38,12 +92,16 @@ end
 Mercenary.program(:sankey) do |p|
   p.syntax 'sankey [options] ACCOUNT_QUERY'
 
-  p.option :begin, '-b', '--begin', 'When to begin the chart'
-  p.option :end, '-e', '--end', 'When to end the chart'
+  p.option :begin, '-b DATE', '--begin DATE', 'When to begin the chart'
+  p.option :end, '-e DATE', '--end DATE', 'When to end the chart'
+  p.option :scrub, '-s', '--scrub', 'Scrub the absolute numbers'
 
   p.action do |_, options|
-    options[:query] = ARGV
-    chart = SankeyChart.new(query: ARGV.join(' ')).render!
+    params = { query: ARGV.join(' ') }
+    params[:start] = Date.parse(options[:begin]) if options[:begin]
+    params[:stop] = Date.parse(options[:end]) if options[:end]
+    params[:scrub] = options[:scrub]
+    chart = SankeyChart.new(params).render!
     puts chart
   end
 end

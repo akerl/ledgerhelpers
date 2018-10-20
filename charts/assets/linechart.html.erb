@@ -18,13 +18,16 @@ function drawChart() {
     ]);
 
   var options = {
+    height: 600,
+    width: 1200,
     interpolateNulls: true,
           legend: {
-            position: 'bottom',
+            position: 'top',
+            maxLines: 3,
           },
           vAxis: {
             format: "currency",
-          }
+          },
         };
 
         var chart = new google.visualization.LineChart(document.getElementById('chart'));

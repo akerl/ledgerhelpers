@@ -29,10 +29,10 @@ module Charts
 
     def account_changes
       @account_changes ||= account_names.map do |name|
-        res = run("reg -D --format \"%D %(to_int(amount))\\n\" '#{name}'").lines
+        res = run("reg -D --format \"%D %(amount)\\n\" '#{name}'").lines
         vals = res.map(&:split).each_with_object(Hash.new { 0 }) do |item, obj|
           date = Date.parse(item.first)
-          obj[date] = item.last.to_i
+          obj[date] = item.last.gsub(/[$,]/, '').to_f
         end
         [name, vals]
       end.to_h
@@ -51,7 +51,7 @@ module Charts
       old = []
       first_date.upto(last_date).each_with_object({}) do |date, obj|
         new = account_names.each_with_index.map do |name, index|
-          account_changes[name][date] + (old[index] || 0)
+          (account_changes[name][date] + (old[index] || 0)).round(2)
         end
         obj[date] = new
         old = new

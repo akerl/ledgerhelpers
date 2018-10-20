@@ -1,0 +1,49 @@
+#!/usr/bin/env ruby
+
+require_relative 'charts/accounts.rb'
+require_relative 'charts/templates.rb'
+
+require 'mercenary'
+
+##
+# Describes a line chart object
+class LineChart
+  def initialize(params = {})
+    @query = params[:query]
+    @start = params[:start] || Date.today.prev_year
+    @stop = params[:stop] || Date.today.next_month.next_month
+  end
+
+  def render!
+    template.render(pairs: pairs)
+  end
+
+  private
+
+  def pairs
+    @pairs ||= account.account_names.combination(2).map do |to, from|
+      res = account.run
+    end
+  end
+
+  def account
+    @account ||= Charts::Accounts.new(query: @query)
+  end
+
+  def template
+    @template ||= Charts::Template.new(name: 'sankey.html')
+  end
+end
+
+Mercenary.program(:sankey) do |p|
+  p.syntax 'sankey [options] ACCOUNT_QUERY'
+
+  p.option :begin, '-b', '--begin', 'When to begin the chart'
+  p.option :end, '-e', '--end', 'When to end the chart'
+
+  p.action do |_, options|
+    options[:query] = ARGV
+    chart = SankeyChart.new(query: ARGV.join(' ')).render!
+    puts chart
+  end
+end

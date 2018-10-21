@@ -6,17 +6,17 @@ require_relative 'charts/templates.rb'
 require 'mercenary'
 
 ##
-# Describes a line chart object
-class LineChart
+# Describes a donut chart object
+class DonutChart
   def initialize(params = {})
     @query = params[:query]
     @start = params[:start] || Date.today.prev_year
-    @stop = params[:stop] || Date.today.next_month.next_month
+    @stop = params[:stop] || Date.today
     @scrub = params[:scrub]
   end
 
   def render!
-    p = @scrub ? scrubbed_points : points
+    p = @scrub ? scrubbed_sums : clean_sums
     template.render(
       account_names: account.account_names,
       points: p
@@ -25,18 +25,32 @@ class LineChart
 
   private
 
-  def scrubbed_points
-    @scrubbed_points ||= points.map do |k, v|
-      [k, v.map { |x| (x * 1000 / max).round }]
-    end.to_h
+  def scrubbed_sums
+    @scrubbed_sums ||= clean_sums.map do |k, v|
+      [k, (v * 1000 / max).round]
+    end
   end
 
   def max
-    @max ||= points.values.flatten.max
+    @max ||= clean_sums.map(&:last).max
   end
 
-  def points
-    @points ||= account.account_totals(@start, @stop)
+  def clean_sums
+    @clean_sums ||= sums.reject { |x| x.last.zero? }.sort_by(&:last).reverse
+  end
+
+  def sums
+    @sums ||= account.account_names.each_with_index.map do |name, index|
+      [name, last_point[index] - first_point[index]]
+    end
+  end
+
+  def first_point
+    @first_point ||= account.all_account_totals[@start]
+  end
+
+  def last_point
+    @last_point ||= account.all_account_totals[@stop]
   end
 
   def account
@@ -44,12 +58,12 @@ class LineChart
   end
 
   def template
-    @template ||= Charts::Template.new(name: 'linechart.html')
+    @template ||= Charts::Template.new(name: 'donut.html')
   end
 end
 
-Mercenary.program(:plot) do |p|
-  p.syntax 'plot [options] ACCOUNT_QUERY'
+Mercenary.program(:donut) do |p|
+  p.syntax 'donut [options] ACCOUNT_QUERY'
 
   p.option :begin, '-b DATE', '--begin DATE', 'When to begin the chart'
   p.option :end, '-e DATE', '--end DATE', 'When to end the chart'
@@ -60,7 +74,7 @@ Mercenary.program(:plot) do |p|
     params[:start] = Date.parse(options[:begin]) if options[:begin]
     params[:stop] = Date.parse(options[:end]) if options[:end]
     params[:scrub] = options[:scrub]
-    chart = LineChart.new(params).render!
+    chart = DonutChart.new(params).render!
     puts chart
   end
 end

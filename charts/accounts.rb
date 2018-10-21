@@ -15,8 +15,12 @@ module Charts
       @account_names ||= run("accounts #{query}").split("\n")
     end
 
-    def account_totals
-      @account_totals ||= sum_account_totals
+    def account_totals(start, stop)
+      account_totals.select { |k, _| k >= start && k <= stop }
+    end
+
+    def all_account_totals
+      @all_account_totals ||= sum_account_totals
     end
 
     def first_date

@@ -36,7 +36,7 @@ class SankeyChart
       src = src_account(item)
       next unless account_names.include? src
 
-      item.actions.each { |action| parse_action(action, acc) }
+      item.actions.each { |action| parse_action(action, acc, src) }
     end
   end
 

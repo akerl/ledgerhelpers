@@ -2,8 +2,8 @@
 
 require 'date'
 require 'yaml'
-require 'cymbal'
 require 'ballista'
+require 'cymbal'
 
 CONFIG_FILE = 'projections.yml'.freeze
 JOURNAL_DIR = 'journals'.freeze

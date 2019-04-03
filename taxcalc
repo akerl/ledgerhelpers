@@ -31,7 +31,7 @@ end
 class TaxCalc # rubocop:disable Metrics/ClassLength
   def initialize(params = {})
     @config_file = params[:config]
-    @year = params[:year] || (Date.today.year - 0).to_s
+    @year = params[:year] || (Date.today.year - 1).to_s
   end
 
   def summary

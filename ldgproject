@@ -4,6 +4,7 @@ require 'date'
 require 'yaml'
 require 'ballista'
 require 'cymbal'
+require 'burglar'
 
 CONFIG_FILE = 'projections.yml'.freeze
 JOURNAL_DIR = 'journals'.freeze
@@ -13,7 +14,7 @@ def config
 end
 
 def full_range
-  @full_range ||= [Date.today, Date.new(Date.today.year + 1, 12)]
+  @full_range ||= [burglar_begin, Date.new(Date.today.year + 1, 12)]
 end
 
 def month_pairs
@@ -34,21 +35,58 @@ def header
 end
 
 def existing_content(file)
-  return '' unless File.exist? file
+  return Ledger.new unless File.exist? file
 
   content = File.read(file).partition(header).first.rstrip
-  return '' if content.empty?
+  return Ledger.new if content.empty?
 
-  content + "\n\n"
+  Ledger::Journal.from_text(content)
+end
+
+def burglar_begin
+  Date.today - 30
+end
+
+def burglar_end
+  Date.today
+end
+
+def all_burglar_content
+  @all_burglar_content ||= Burglar.new(
+    begin: burglar_begin,
+    end: burglar_end
+  ).transactions
+end
+
+def past_content(file, first, last)
+  new = all_burglar_content.entries.select do |x|
+    first <= x.date && x.date <= last
+  end
+  content = existing_content(file)
+  known_ids = content.entries.map do |x|
+    x.tags.values_at('transaction_id', 'transaction_id2')
+  end.flatten.compact
+  new.each do |x|
+    next if known_ids.include? x.tags['transaction_id']
+    content.entries << x
+  end
+  content
+end
+
+def ballista_content(first, last)
+  first = Date.today if first < Date.today
+  return Ledger.new if first > last
+  Ballista.new(entries: config).project(first, last)
 end
 
 def walk_months
   month_pairs.each do |first, last|
-    results = Ballista.new(entries: config).project(first, last)
     file = month_file(first)
-    new_content = "#{existing_content(file)}#{header}\n\n#{results}"
+    content = past_content(file, first, last).to_s
+    future = ballista_content(first, last)
+    content << "\n\n#{header}\n\n#{future}" unless future.entries.empty?
     Dir.mkdir(File.dirname(file)) unless Dir.exist?(File.dirname(file))
-    File.open(file, 'w') { |fh| fh << new_content }
+    File.open(file, 'w') { |fh| fh << content }
   end
 end
 

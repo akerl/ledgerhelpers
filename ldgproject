@@ -58,7 +58,7 @@ def all_burglar_content
   ).transactions
 end
 
-def past_content(file, first, last)
+def past_content(file, first, last) # rubocop:disable Metrics/AbcSize,Metrics/MethodLength,Metrics/LineLength
   new = all_burglar_content.entries.select do |x|
     first <= x.date && x.date <= last
   end
@@ -79,7 +79,7 @@ def ballista_content(first, last)
   Ballista.new(entries: config).project(first, last)
 end
 
-def walk_months
+def walk_months # rubocop:disable Metrics/AbcSize
   month_pairs.each do |first, last|
     file = month_file(first)
     content = past_content(file, first, last).to_s

@@ -84,7 +84,7 @@ def walk_months
     file = month_file(first)
     content = past_content(file, first, last).to_s
     future = ballista_content(first, last)
-    content << "\n\n#{header}\n\n#{future}" unless future.entries.empty?
+    content << "\n#{header}\n\n#{future}" unless future.entries.empty?
     Dir.mkdir(File.dirname(file)) unless Dir.exist?(File.dirname(file))
     File.open(file, 'w') { |fh| fh << content }
   end

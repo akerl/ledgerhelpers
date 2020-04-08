@@ -6,11 +6,23 @@ require 'ballista'
 require 'cymbal'
 require 'burglar'
 
-CONFIG_FILE = 'projections.yml'.freeze
+CONFIG_DIR = 'projections'.freeze
 JOURNAL_DIR = 'journals'.freeze
 
+def load_file(file)
+  YAML.safe_load(File.read(file))
+end
+
+def config_file_paths
+  @config_file_paths ||= Dir.glob("#{CONFIG_DIR}/*.yml")
+end
+
+def config_file
+  @config_file ||= config_file_paths.map { |x| load_file(x) }.reduce(:+)
+end
+
 def config
-  @config ||= Cymbal.symbolize(YAML.safe_load(File.read(CONFIG_FILE)))
+  @config ||= Cymbal.symbolize(config_file)
 end
 
 def full_range
@@ -90,7 +102,7 @@ def walk_months # rubocop:disable Metrics/AbcSize
   end
 end
 
-unless File.exist? CONFIG_FILE
+unless Dir.exist? CONFIG_DIR
   puts 'Run this from directory with journals and projections.yml'
   exit 1
 end

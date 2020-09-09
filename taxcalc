@@ -83,7 +83,7 @@ class TaxCalc # rubocop:disable Metrics/ClassLength
       return withholding[account.to_s.split(':').last.to_sym]
     end
 
-    res = `ledger register #{account} -p '#{@year}' -s`
+    res = `ledger register #{account} -p '#{@year}' -s -H`
     return 0 if res.size.zero?
 
     res.split.last.tr('$,', '').to_f

@@ -9,6 +9,26 @@ require 'burglar'
 CONFIG_DIR = 'projections'.freeze
 JOURNAL_DIR = 'journals'.freeze
 
+class Cache
+  def initialize
+    @list = []
+  end
+
+  def include?(x)
+    @list.include?(x)
+  end
+
+  def add(x)
+    @list << x
+  end
+
+  def add_array(x)
+    @list += x
+  end
+end
+
+ID_CACHE = Cache.new
+
 def load_file(file)
   YAML.safe_load(File.read(file))
 end
@@ -48,11 +68,17 @@ end
 
 def existing_content(file)
   return Ledger.new unless File.exist? file
+  text = File.read(file).partition(header).first.rstrip
+  return Ledger.new if text.empty?
 
-  content = File.read(file).partition(header).first.rstrip
-  return Ledger.new if content.empty?
+  content = Ledger::Journal.from_text(text)
 
-  Ledger::Journal.from_text(content)
+  ids = content.entries.map do |x|
+    x.tags.values_at('transaction_id', 'transaction_id2')
+  end.flatten.compact
+  ID_CACHE.add_array ids
+
+  content
 end
 
 def burglar_begin
@@ -70,16 +96,14 @@ def all_burglar_content
   ).transactions
 end
 
+
 def past_content(file, first, last) # rubocop:disable Metrics/AbcSize,Metrics/MethodLength,Metrics/LineLength
   new = all_burglar_content.entries.select do |x|
     first <= x.date && x.date <= last
   end
   content = existing_content(file)
-  known_ids = content.entries.map do |x|
-    x.tags.values_at('transaction_id', 'transaction_id2')
-  end.flatten.compact
   new.each do |x|
-    next if known_ids.include? x.tags['transaction_id']
+    next if ID_CACHE.include? x.tags['transaction_id']
     content.entries << x
   end
   content

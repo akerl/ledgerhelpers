@@ -1,0 +1,35 @@
+#!/usr/bin/env ruby
+
+require 'burglar'
+
+def actual_cmd
+  `ledger --no-pager --flat --no-total -C balance Assets Liabilities`
+end
+
+def get_actual
+  raw = actual_cmd.split("\n").map do |x|
+    x.split.values_at(1, 0)
+  end
+  raw.to_h.transform_values { |x| x.gsub(/[,$]/, '').to_f.abs }
+end
+
+b = Burglar.new
+
+logged = Burglar.new.banks.map { |_, v| [v.account_name, v.balance] }
+actual = get_actual
+
+fails = 0
+
+logged.each do |k, v|
+  a = actual[k]
+  next if v == a
+  puts "Mismatch found for #{k} -- logged #{v} / actual #{a} / delta #{v - a}"
+  fails += 1
+end
+
+if fails == 0
+  puts 'Balances aligned'
+  exit 0
+end
+
+exit 1

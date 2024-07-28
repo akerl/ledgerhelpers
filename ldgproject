@@ -82,7 +82,7 @@ def existing_content(file)
 end
 
 def burglar_begin
-  Date.today - 50
+  Date.today - 30
 end
 
 def burglar_end

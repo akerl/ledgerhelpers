@@ -13,8 +13,6 @@ def get_actual
   raw.to_h.transform_values { |x| x.gsub(/[,$]/, '').to_f.abs }
 end
 
-b = Burglar.new
-
 logged = Burglar.new.banks.map { |_, v| [v.account_name, v.balance] }
 actual = get_actual
 

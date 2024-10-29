@@ -2,27 +2,27 @@
 
 require 'burglar'
 
-def actual_cmd
+def local_cmd
   `ledger --no-pager --empty --flat --no-total -C balance Assets Liabilities`
 end
 
-def get_actual
-  raw = actual_cmd.split("\n").map do |x|
+def get_local
+  raw = local_cmd.split("\n").map do |x|
     x.split.values_at(1, 0)
   end
   raw.to_h.transform_values { |x| x.gsub(/[,$]/, '').to_f.abs }
 end
 
-logged = Burglar.new.banks.map { |_, v| [v.account_name, v.balance] }
-actual = get_actual
+upstream = Burglar.new.banks.map { |_, v| [v.account_name, v.balance] }
+local = get_local
 
 fails = 0
 
-logged.each do |k, v|
-  a = actual[k]
+upstream.each do |k, v|
+  a = local[k]
   puts("bad account: #{k}") unless a
   next if v == a
-  puts "Mismatch found for #{k} -- logged #{v} / actual #{a} / delta #{v - a}"
+  puts "Mismatch found for #{k} -- upstream #{v} / local #{a} / delta #{v - a}"
   fails += 1
 end
 
